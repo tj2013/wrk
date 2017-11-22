@@ -158,6 +158,8 @@ int main(int argc, char **argv) {
         errors.write   += t->errors.write;
         errors.timeout += t->errors.timeout;
         errors.status  += t->errors.status;
+        errors.httpparse += t->errors.httpparse;
+        errors.httpincomplete += t->errors.httpincomplete;
     }
 
     uint64_t runtime_us = time_us() - start;
@@ -178,9 +180,9 @@ int main(int argc, char **argv) {
     char *runtime_msg = format_time_us(runtime_us);
 
     printf("  %"PRIu64" requests in %s, %sB read\n", complete, runtime_msg, format_binary(bytes));
-    if (errors.connect || errors.read || errors.write || errors.timeout) {
-        printf("  Socket errors: connect %d, read %d, write %d, timeout %d\n",
-               errors.connect, errors.read, errors.write, errors.timeout);
+    if (errors.connect || errors.read || errors.write || errors.timeout || errors.httpparse || errors.httpincomplete) {
+        printf("  Errors: connect %d, read %d, write %d, timeout %d, http parse %d, http incomplete %d\n",
+               errors.connect, errors.read, errors.write, errors.timeout, errors.httpparse, errors.httpincomplete);
     }
 
     if (errors.status) {
@@ -430,20 +432,28 @@ static void socket_readable(aeEventLoop *loop, int fd, void *data, int mask) {
     do {
         switch (sock.read(c, &n)) {
             case OK:    break;
-            case ERROR: goto error;
+            case ERROR: 
+                c->thread->errors.read++;
+                goto error;
             case RETRY: return;
         }
 
-        if (http_parser_execute(&c->parser, &parser_settings, c->buf, n) != n) goto error;
-        if (n == 0 && !http_body_is_final(&c->parser)) goto error;
-
+        if (http_parser_execute(&c->parser, &parser_settings, c->buf, n) != n) {
+            c->thread->errors.httpparse++;
+            goto error;
+        }
+        if (n == 0 && !http_body_is_final(&c->parser)) {
+            c->thread->errors.httpincomplete++;
+            fprintf(stderr, "Incomplte http response state %d, header state %d, http status %d\n", 
+                c->parser.state, c->parser.header_state, c->parser.status_code);
+            goto error;
+        }
         c->thread->bytes += n;
     } while (n == RECVBUF && sock.readable(c) > 0);
 
     return;
 
   error:
-    c->thread->errors.read++;
     reconnect_socket(c->thread, c);
 }
 

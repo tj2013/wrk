@@ -1,0 +1,1 @@
+./wrk -t10 -c1000 -d5m -s test.lua --timeout 60000  http://mock.mystiflymock.us-west-2.lab.stockyard.io/onepoint

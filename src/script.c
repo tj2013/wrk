@@ -226,7 +226,9 @@ void script_errors(lua_State *L, errors *errors) {
         errors->read,
         errors->write,
         errors->status,
-        errors->timeout
+        errors->timeout,
+        errors->httpparse,
+        errors->httpincomplete
     };
     const table_field fields[] = {
         { "connect", LUA_TNUMBER, &e[0] },
@@ -234,6 +236,8 @@ void script_errors(lua_State *L, errors *errors) {
         { "write",   LUA_TNUMBER, &e[2] },
         { "status",  LUA_TNUMBER, &e[3] },
         { "timeout", LUA_TNUMBER, &e[4] },
+        { "httpparse", LUA_TNUMBER, &e[5] },
+        { "httpincomplete", LUA_TNUMBER, &e[6] },
         { NULL,      0,           NULL  },
     };
     lua_newtable(L);
