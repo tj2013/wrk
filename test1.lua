@@ -1,9 +1,17 @@
 wrk.method = "POST"
-wrk.headers["Content-Type"] = "text/xml"
-wrk.headers["Accept"] = "text/xml"
-wrk.headers["SOAPAction"] = "\"XXX.XXX/XXX/XXX\""
---wrk.headers["SOAPAction"] = "\"XXX.XXX/XXX/XXX\""
---wrk.body = "does not matter"
+wrk.headers["Content-Type"] = "application/xml"
+wrk.headers["Accept"] = "application/xml"
+
+function readAll(file)
+    local f = assert(io.open(file, "rb"))
+    local content = f:read("*all")
+    f:close()
+    return content
+end
+
+wrk.body = readAll("search.xml")
+
+--print(wrk.body)
 
 local counter = 1
 local threads = {}
